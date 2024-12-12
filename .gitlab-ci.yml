@@ -1,26 +1,33 @@
-build_frontend:
+.build:
   image: docker:27.4.0-rc.2-cli
   services:
     - docker:27.4.0-rc.2-dind
   script:
-    - docker build -t $CI_REGISTRY_IMAGE/frontend:1.0 frontend-Dir
+    - docker build -t $CI_REGISTRY_IMAGE/$MICROSERVICE:$MS_VERSION $MS_DIR
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE/frontend:1.0
+    - docker push $CI_REGISTRY_IMAGE/$MICROSERVICE:$MS_VERSION
+  variables:
+    MICROSERVICE: ""
+    MS_VERSION: ""
+    MS_DIR: ""
+
+build_frontend:
+  extends: .build
+  variables:
+    MICROSERVICE: frontend
+    MS_VERSION: 2.0
+    MS_DIR: frontend-Dir
 
 build_products:
-  image: docker:27.4.0-rc.2-cli
-  services:
-    - docker:27.4.0-rc.2-dind
-  script:
-    - docker build -t $CI_REGISTRY_IMAGE/products:1.0 products-Dir
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE/products:1.0
+  extends: .build
+  variables:
+    MICROSERVICE: products
+    MS_VERSION: 2.0
+    MS_DIR: products-Dir
 
 build_shoppingcart:
-  image: docker:27.4.0-rc.2-cli
-  services:
-    - docker:27.4.0-rc.2-dind
-  script:
-    - docker build -t $CI_REGISTRY_IMAGE/shoppingcart:1.0 shoppingcart-Dir
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE/shoppingcart:1.0
+  extends: .build
+  variables:
+    MICROSERVICE: shoppingcart
+    MS_VERSION: 2.0
+    MS_DIR: shoppingcart-Dir
