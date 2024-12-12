@@ -33,3 +33,5 @@ build_shoppingcart:
     MICROSERVICE: shoppingcart
     MS_VERSION: 2.0
     MS_DIR: shoppingcart-Dir
+  needs:
+    - build_frontend
