@@ -24,6 +24,8 @@ build_products:
     MICROSERVICE: products
     MS_VERSION: 2.0
     MS_DIR: products-Dir
+  needs:
+    - build_frontend
 
 build_shoppingcart:
   extends: .build
