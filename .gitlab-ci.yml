@@ -1,19 +1,25 @@
 buil_frontend:
-  image: docker:dind
+  image: docker:27.4.0-rc.2-cli
+  services:
+    - docker:27.4.0-rc.2-dind
   script:
     - docker build -t frontend:1.0 frontend-Dir
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker push frontend:1.0
 
 build_products:
-  image: docker:dind
+  image: docker:27.4.0-rc.2-cli
+  services:
+    - docker:27.4.0-rc.2-dind
   script:
     - docker build -t products:1.0 products-Dir
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker push products:1.0
 
 build_shoppingcart:
-  image: docker:dind
+  image: docker:27.4.0-rc.2-cli
+  services:
+    - docker:27.4.0-rc.2-dind
   script:
     - docker build -t shoppingcart:1.0 shoppingcart-Dir
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
