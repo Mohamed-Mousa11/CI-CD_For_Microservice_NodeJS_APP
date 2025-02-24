@@ -3,13 +3,27 @@
   services:
     - docker:27.4.0-rc.2-dind
   script:
-    - docker build -t $CI_REGISTRY_IMAGE/$MICROSERVICE:$MS_VERSION $MS_DIR
+    - apk add --no-chache jq httpie
+    - export $JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version )
+      #saving version in pakage.json file
+
+    - export VERSIONED_IMAGE=$MICROSERVICE:$JSON_VERSION.$CI_PIPELINE_ID
+      #creating a versioned image for each microservice
+
+    - echo "VERSIONED_IMAGE=$VERSIONED_IMAGE" >> environmental-variables.env
+      #saving the versioned image into an environmental file
+
+    - docker build -t $CI_REGISTRY_IMAGE/$VERSIONED_IMAGE $MS_DIR
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE/$MICROSERVICE:$MS_VERSION
+    - docker push $CI_REGISTRY_IMAGE/$VERSIONED_IMAGE
+    - echo $VERSIONED_IMAGE
   variables:
     MICROSERVICE: ""
     MS_VERSION: ""
     MS_DIR: ""
+  artifacts:
+    reports:
+      dotenv: environmental-variables.env
 
 build_frontend:
   extends: .build
