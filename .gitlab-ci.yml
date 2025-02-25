@@ -4,10 +4,10 @@
     - docker:27.4.0-rc.2-dind
   script:
     - apk add --no-chache jq httpie
-    - export $JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version )
+    - export MS_JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version )
       #saving version in pakage.json file
 
-    - export VERSIONED_IMAGE=$MICROSERVICE:$JSON_VERSION.$CI_PIPELINE_ID
+    - export VERSIONED_IMAGE=$MICROSERVICE:$MS_JSON_VERSION.$CI_PIPELINE_ID
       #creating a versioned image for each microservice
 
     - echo "VERSIONED_IMAGE=$VERSIONED_IMAGE" >> environmental-variables.env
