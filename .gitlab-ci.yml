@@ -1,5 +1,11 @@
-.build:
+stages:
+  - build
+  - deploy
+
+
+build:
   image: docker:27.4.0-rc.2-cli
+  stage: build
   services:
     - docker:27.4.0-rc.2-dind
   script:
@@ -38,8 +44,7 @@ build_products:
     MICROSERVICE: products
     MS_VERSION: 2.0
     MS_DIR: products-Dir
-  needs:
-    - build_frontend
+
 
 build_shoppingcart:
   extends: .build
@@ -47,5 +52,11 @@ build_shoppingcart:
     MICROSERVICE: shoppingcart
     MS_VERSION: 2.0
     MS_DIR: shoppingcart-Dir
-  needs:
-    - build_frontend
+ 
+
+
+.deploy:
+  image: docker:dind
+  stage: deploy
+  script:
+    - ssh -o StrictKeyHostChecking=no -i $SSH_KEY ec2_user@
