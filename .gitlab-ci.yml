@@ -3,7 +3,7 @@
   services:
     - docker:27.4.0-rc.2-dind
   script:
-    - apk add --no-chache jq httpie
+    - apk add --no-cache jq httpie
     - export MS_JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version )
       #saving version in pakage.json file
 
