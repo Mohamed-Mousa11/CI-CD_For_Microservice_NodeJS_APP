@@ -9,31 +9,36 @@ stages:
     - docker:27.4.0-rc.2-dind
   script:
     - apk add --no-cache jq httpie
-    - export MS_JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version)
-      # Saving version in package.json file
+    - |
+      # Extract version from package.json
+      MS_JSON_VERSION=$(cat "$MS_DIR/package.json" | jq -r .version)
 
-    - export VERSION=$MS_JSON_VERSION.$CI_PIPELINE_ID
-      # Creating a versioned image for each microservice
-    - export MS_ENV=$(echo "${MICROSERVICE:-default_value}" | tr -cd '[:alnum:]_')
-      # Ensuring MS_ENV only contains letters, digits, and underscores
-    - export MICROSERVICE_VERSION=$MS_ENV.$VERSION
-    - echo "$MS_ENV=$MICROSERVICE_VERSION" >> environmental-variables.env
-      # Saving the versioned image into an environment file
+      # Generate a unique version tag
+      VERSION="$MS_JSON_VERSION.$CI_PIPELINE_ID"
 
-    # Debugging Step: Print .env file before uploading
-    - echo "===== ENV FILE CONTENTS ====="
-    - cat environmental-variables.env
-    - echo "============================="
+      # Ensure MS_ENV contains only valid characters (letters, digits, and underscores)
+      MS_ENV=$(echo "${MICROSERVICE:-default_value}" | tr -cd '[:alnum:]_')
 
-    # Validate .env file to ensure it has valid format
-    - if ! grep -qE "^[A-Za-z0-9_]+=.+$" environmental-variables.env; then
-        echo "ERROR: Invalid .env file format. Exiting..." >&2;
-        exit 1;
+      # Generate a versioned image name
+      MICROSERVICE_VERSION="$MS_ENV.$VERSION"
+
+      # Save the versioned image name to an environment file
+      echo "$MS_ENV=$MICROSERVICE_VERSION" > environmental-variables.env
+
+      # Debugging: Print .env file before uploading
+      echo "===== ENV FILE CONTENTS ====="
+      cat environmental-variables.env
+      echo "============================="
+
+      # Validate .env file to ensure correct format
+      if ! grep -qE "^[A-Za-z0-9_]+=.+$" environmental-variables.env; then
+        echo "ERROR: Invalid .env file format. Exiting..." >&2
+        exit 1
       fi
 
-    - docker build -t $CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION $MS_DIR
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION
+    - docker build -t "$CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION" "$MS_DIR"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker push "$CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION"
 
   variables:
     MICROSERVICE: ""
@@ -69,16 +74,18 @@ build_shoppingcart:
   image: docker:dind
   stage: deploy
   before_script: 
-    - chmod 400 $SSH_KEY
-    - scp -o StrictHostKeyChecking=no -i $SSH_KEY ./docker-compose.yaml ec2-user@HOST_IP:/home/ec2-user
+    - chmod 400 "$SSH_KEY"
+    - scp -o StrictHostKeyChecking=no -i "$SSH_KEY" ./docker-compose.yaml ec2-user@HOST_IP:/home/ec2-user
   script:
-    - ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@HOST_IP "
-      docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
-      export DC_IMAGE=$MS_ENV &&
-      export DC_PORT=$HOST_PORT &&
-      export DC_CONTAINER_PORT=$CONTAINER_PORT &&
-      docker-compose -f docker-compose.yaml down &&
-      docker-compose -f docker-compose.yaml up -d"
+    - |
+      ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ec2-user@HOST_IP << 'EOF'
+        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+        export DC_IMAGE="$MS_ENV"
+        export DC_PORT="$HOST_PORT"
+        export DC_CONTAINER_PORT="$CONTAINER_PORT"
+        docker-compose -f docker-compose.yaml down
+        docker-compose -f docker-compose.yaml up -d
+      EOF
   variables:
     MICROSERVICE: ""
     DC_PORT: ""
