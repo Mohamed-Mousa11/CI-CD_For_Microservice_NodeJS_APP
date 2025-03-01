@@ -4,3 +4,11 @@ services:
     image: ${DC_IMAGE}
     ports:
       - ${DC_PORT}:${DC_CONTAINER_PORT}
+    # Assign to a network or multiple networks
+    networks:
+      - microservice_network
+
+networks:
+  microservice_network:
+    external:
+      name: microservice_network
