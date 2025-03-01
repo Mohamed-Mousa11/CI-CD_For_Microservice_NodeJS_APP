@@ -10,6 +10,7 @@ stages:
       alias: docker
   variables:
     DOCKER_HOST: tcp://docker:2375/
+    DOCKER_CLIENT_TIMEOUT: 300
   script:
     - apk add --no-cache jq httpie
     - |
@@ -73,6 +74,11 @@ build_shoppingcart:
 .deploy:
   image: docker:dind
   stage: deploy
+  variables:
+    MICROSERVICE: ""
+    DC_PORT: ""
+    CONTAINER_PORT: ""
+    DC_IMAGE: "$CI_REGISTRY_IMAGE/$(eval echo \$$MICROSERVICE)"
   before_script:
     - export DC_IMAGE=$(eval echo \$$MICROSERVICE)
     - echo $DC_IMAGE
@@ -88,10 +94,6 @@ build_shoppingcart:
         docker network create microservice_network || true &&
         docker-compose -f docker-compose.yaml down &&
         docker-compose -f docker-compose.yaml up -d"
-  variables:
-    MICROSERVICE: ""
-    DC_PORT: ""
-    CONTAINER_PORT: ""
 
 deploy_frontend:
   extends: .deploy
