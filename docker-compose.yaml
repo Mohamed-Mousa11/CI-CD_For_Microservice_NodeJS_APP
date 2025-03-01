@@ -12,3 +12,4 @@ networks:
   microservice_network:
     external:
       name: microservice_network
+

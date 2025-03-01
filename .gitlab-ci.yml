@@ -2,98 +2,87 @@ stages:
   - build
   - deploy
 
+
 .build:
   image: docker:27.4.0-rc.2-cli
   stage: build
-  services:
-    - name: docker:dind
-      alias: docker
-  variables:
-    DOCKER_HOST: tcp://docker:2375/
-    DOCKER_CLIENT_TIMEOUT: 300
+  services: 
+    - docker:27.4.0-rc.2-dind 
   script:
     - apk add --no-cache jq httpie
-    - |
-      # Extract version from package.json
-      MS_JSON_VERSION=$(cat "$MS_DIR/package.json" | jq -r .version)
+    - export MS_JSON_VERSION=$(cat $MS_DIRECTORY/package.json | jq -r .version )
+      # Saving Version in package.json file
 
-      # Generate a unique version tag
-      VERSION="$MS_JSON_VERSION.$CI_PIPELINE_ID"
+    - export VERSION=$MS_JSON_VERSION.$CI_PIPELINE_ID
+      #creating a versioned image for each microservice 
+    - export MS_ENV=$MICROSERVICE
+    - export MICROSERVICE_VERSION=$MICROSERVICE:$VERSION
+    - echo "$MS_ENV=$MICROSERVICE_VERSION" >> environmental-variables.env
+      # Saving the versioned image into an environmental file
 
-      # Ensure MS_ENV contains only valid characters (letters, digits, and underscores)
-      MS_ENV=$(echo "${MICROSERVICE:-default_value}" | tr -cd '[:alnum:]_')
-
-      # Generate a versioned image name
-      MICROSERVICE_VERSION="$MS_ENV.$VERSION"
-
-      # Save the versioned image name to an environment file
-      echo "$MS_ENV=$MICROSERVICE_VERSION" > environmental-variables.env
-
-      # Debugging: Print .env file before uploading
-      echo "===== ENV FILE CONTENTS ====="
-      cat environmental-variables.env
-      echo "============================="
-
-      # Validate .env file to ensure correct format
-      if ! grep -qE "^[A-Za-z0-9_]+=.+$" environmental-variables.env; then
-        echo "ERROR: Invalid .env file format. Exiting..." >&2
-        exit 1
-      fi
-    - docker build -t "$CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION" "$MS_DIR"
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    - docker push "$CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION"
+    - docker build -t $CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION $MS_DIRECTORY
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION
   variables:
     MICROSERVICE: ""
-    MS_VERSION: ""
-    MS_DIR: ""
+    MS_DIRECTORY: ""
   artifacts:
     reports:
       dotenv: environmental-variables.env
+
+
 
 build_frontend:
   extends: .build
   variables:
     MICROSERVICE: frontend
-    MS_VERSION: 2.0
-    MS_DIR: frontend-Dir
+    MS_DIRECTORY: frontend-Dir
+
 
 build_products:
   extends: .build
   variables:
     MICROSERVICE: products
-    MS_VERSION: 2.0
-    MS_DIR: products-Dir
+    MS_DIRECTORY: products-Dir
 
 build_shoppingcart:
   extends: .build
   variables:
     MICROSERVICE: shoppingcart
-    MS_VERSION: 2.0
-    MS_DIR: shoppingcart-Dir
+    MS_DIRECTORY: shoppingcart-Dir
+
+
 
 .deploy:
   image: docker:dind
   stage: deploy
-  variables:
-    MICROSERVICE: ""
-    DC_PORT: ""
-    CONTAINER_PORT: ""
-    DC_IMAGE: "$CI_REGISTRY_IMAGE/$(eval echo '\\$$MICROSERVICE')"
   before_script:
-    - export DC_IMAGE=$(eval echo '\\$$MICROSERVICE')
+    - export DC_IMAGE=$(eval echo \$$MICROSERVICE)
+    # `eval echo`  takes a string and executes it as a shell command, can be used to resolve the second level of variable substitution
+    # Ex: MICROSERVICE=frontend  -----.env file----->> frontend=frontend:1.0.0.1577975529 
     - echo $DC_IMAGE
+    # TESTING THE NAME OF THE IMAGE OF EACH MICROSERVICE
     - chmod 400 $SSH_KEY
     - scp -o StrictHostKeyChecking=no -i $SSH_KEY ./docker-compose.yaml ec2-user@$HOST_IP:/home/ec2-user
+    # SECURE COPY THE docker-compose.yaml file TO THE HOST SERVER
   script:
     - ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@$HOST_IP "
-        echo \"$CI_REGISTRY_PASSWORD\" | docker login -u \"$CI_REGISTRY_USER\" --password-stdin \"$CI_REGISTRY\" &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         export COMPOSE_PROJECT_NAME=$MICROSERVICE &&
-        export DC_IMAGE=$CI_REGISTRY_IMAGE/$(eval echo '\\$$MICROSERVICE') &&
+        export DC_IMAGE=$CI_REGISTRY_IMAGE/$(eval echo \$$MICROSERVICE) &&
         export DC_PORT=$HOST_PORT &&
         export DC_CONTAINER_PORT=$CONTAINER_PORT &&
         docker network create microservice_network || true &&
         docker-compose -f docker-compose.yaml down &&
         docker-compose -f docker-compose.yaml up -d"
+
+  variables:
+    MICROSERVICE: ""
+    DC_PORT: ""
+    CONTAINER_PORT: ""
+
+
+
 
 deploy_frontend:
   extends: .deploy
@@ -102,8 +91,10 @@ deploy_frontend:
     DC_PORT: 3000
     CONTAINER_PORT: 3000
   environment:
-    name: production
+    name: production 
     url: http://$HOST_IP
+
+
 
 deploy_products:
   extends: .deploy
@@ -115,7 +106,7 @@ deploy_products:
     name: production
     url: http://$HOST_IP
 
-deploy_shoppingcart:
+deploy_shopping_cart:
   extends: .deploy
   variables:
     MICROSERVICE: shoppingcart
