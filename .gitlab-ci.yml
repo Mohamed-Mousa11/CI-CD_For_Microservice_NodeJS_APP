@@ -73,8 +73,7 @@ build_shoppingcart:
   before_script:
     - echo "Deploying to server: $HOST_IP"
     - chmod 400 "$SSH_KEY"
-    - |
-      scp -o StrictHostKeyChecking=no -i "$SSH_KEY" ./docker-compose.yaml ec2-user@"$HOST_IP":/home/ec2-user
+    - scp -o StrictHostKeyChecking=no -i "$SSH_KEY" ./docker-compose.yaml ec2-user@"$HOST_IP":/home/ec2-user  # No `|` needed
   script:
     - |
       ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ec2-user@"$HOST_IP" << 'EOF'
