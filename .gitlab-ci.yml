@@ -3,7 +3,7 @@ stages:
   - deploy
 
 
-build:
+.build:
   image: docker:27.4.0-rc.2-cli
   stage: build
   services:
