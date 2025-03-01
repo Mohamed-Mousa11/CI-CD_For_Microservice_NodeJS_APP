@@ -78,9 +78,9 @@ build_shoppingcart:
     MICROSERVICE: ""
     DC_PORT: ""
     CONTAINER_PORT: ""
-    DC_IMAGE: "$CI_REGISTRY_IMAGE/$(eval echo \$$MICROSERVICE)"
+    DC_IMAGE: "$CI_REGISTRY_IMAGE/$(eval echo '\\$$MICROSERVICE')"
   before_script:
-    - export DC_IMAGE=$(eval echo \$$MICROSERVICE)
+    - export DC_IMAGE=$(eval echo '\\$$MICROSERVICE')
     - echo $DC_IMAGE
     - chmod 400 $SSH_KEY
     - scp -o StrictHostKeyChecking=no -i $SSH_KEY ./docker-compose.yaml ec2-user@$HOST_IP:/home/ec2-user
@@ -88,7 +88,7 @@ build_shoppingcart:
     - ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@$HOST_IP "
         echo \"$CI_REGISTRY_PASSWORD\" | docker login -u \"$CI_REGISTRY_USER\" --password-stdin \"$CI_REGISTRY\" &&
         export COMPOSE_PROJECT_NAME=$MICROSERVICE &&
-        export DC_IMAGE=$CI_REGISTRY_IMAGE/$(eval echo \$$MICROSERVICE) &&
+        export DC_IMAGE=$CI_REGISTRY_IMAGE/$(eval echo '\\$$MICROSERVICE') &&
         export DC_PORT=$HOST_PORT &&
         export DC_CONTAINER_PORT=$CONTAINER_PORT &&
         docker network create microservice_network || true &&
