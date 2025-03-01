@@ -2,7 +2,6 @@ stages:
   - build
   - deploy
 
-
 .build:
   image: docker:27.4.0-rc.2-cli
   stage: build
@@ -10,23 +9,37 @@ stages:
     - docker:27.4.0-rc.2-dind
   script:
     - apk add --no-cache jq httpie
-    - export MS_JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version )
-      #saving version in pakage.json file
+    - export MS_JSON_VERSION=$(cat $MS_DIR/package.json | jq -r .version)
+      # Saving version in package.json file
 
     - export VERSION=$MS_JSON_VERSION.$CI_PIPELINE_ID
-      #creating a versioned image for each microservice
-    - export MS_ENV=${MICROSERVICE:-default_value}
-    - export MICROSERVICE_VERSION=$MICROSERVICE.$VERSION
-    - echo "$MS_ENVE=$MICROSERVICE_VERSION" >> environmental-variables.env
-      #saving the versioned image into an environmental file
+      # Creating a versioned image for each microservice
+    - export MS_ENV=$(echo "${MICROSERVICE:-default_value}" | tr -cd '[:alnum:]_')
+      # Ensuring MS_ENV only contains letters, digits, and underscores
+    - export MICROSERVICE_VERSION=$MS_ENV.$VERSION
+    - echo "$MS_ENV=$MICROSERVICE_VERSION" >> environmental-variables.env
+      # Saving the versioned image into an environment file
+
+    # Debugging Step: Print .env file before uploading
+    - echo "===== ENV FILE CONTENTS ====="
+    - cat environmental-variables.env
+    - echo "============================="
+
+    # Validate .env file to ensure it has valid format
+    - if ! grep -qE "^[A-Za-z0-9_]+=.+$" environmental-variables.env; then
+        echo "ERROR: Invalid .env file format. Exiting..." >&2;
+        exit 1;
+      fi
 
     - docker build -t $CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION $MS_DIR
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker push $CI_REGISTRY_IMAGE/$MICROSERVICE_VERSION:$VERSION
+
   variables:
     MICROSERVICE: ""
     MS_VERSION: ""
     MS_DIR: ""
+
   artifacts:
     reports:
       dotenv: environmental-variables.env
@@ -45,15 +58,12 @@ build_products:
     MS_VERSION: 2.0
     MS_DIR: products-Dir
 
-
 build_shoppingcart:
   extends: .build
   variables:
     MICROSERVICE: shoppingcart
     MS_VERSION: 2.0
     MS_DIR: shoppingcart-Dir
- 
-
 
 .deploy:
   image: docker:dind
@@ -69,7 +79,6 @@ build_shoppingcart:
       export DC_CONTAINER_PORT=$CONTAINER_PORT &&
       docker-compose -f docker-compose.yaml down &&
       docker-compose -f docker-compose.yaml up -d"
-
   variables:
     MICROSERVICE: ""
     DC_PORT: ""
@@ -104,4 +113,3 @@ deploy_shoppingcart:
   environment:
     name: production
     url: http://HOST_IP
-  
