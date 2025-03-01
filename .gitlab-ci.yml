@@ -15,7 +15,7 @@ stages:
 
     - export VERSION=$MS_JSON_VERSION.$CI_PIPELINE_ID
       #creating a versioned image for each microservice
-    - export MS_ENV=$MICROSERVICE
+    - export MS_ENV=${MICROSERVICE:-default_value}
     - export MICROSERVICE_VERSION=$MICROSERVICE.$VERSION
     - echo "$MS_ENVE=$MICROSERVICE_VERSION" >> environmental-variables.env
       #saving the versioned image into an environmental file
