@@ -138,10 +138,6 @@ The pipeline consists of the following stages, each playing a crucial role in th
 
 ---
 
-Apologies for the incomplete response earlier. Here's the continuation and completion of the best practices section:
-
----
-
 ## Best Practices
 
 - **Secure Your Pipeline:**
